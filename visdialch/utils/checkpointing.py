@@ -145,6 +145,4 @@ def load_checkpoint(checkpoint_pthpath):
 
 
 if __name__ == '__main__':
-    model_dict, _ = load_checkpoint(
-        '/home/luchenyu/dvd/exps/cap_hist_early_train_20230410_172117/checkpoints/checkpoint_5.pth')
-    print(model_dict)
+    pass

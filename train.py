@@ -202,7 +202,6 @@ def train(opt, logger: AnaLogger, dataloader_dict, finetune=False, load_path='',
             val_loss = 0
 
             logger.info(f'\nValidation after epoch {epoch}:')
-            val_batch_loss = None
             for i, batch in enumerate(tqdm(eval_dataloader)):
                 for key in batch:
                     batch[key] = batch[key].cuda()
@@ -220,8 +219,16 @@ def train(opt, logger: AnaLogger, dataloader_dict, finetune=False, load_path='',
                             val_batch_loss = ndcg_loss(output=out_ndcg, labels=target)
                     else:
                         val_batch_loss = criterion_loss(opt=opt, batch=batch, criterion=criterion, output=output)
-                    val_loss += val_batch_loss.item()
+
+                summary_writer.add_scalar(
+                    tag='val/loss',
+                    scalar_value=val_batch_loss,
+                    global_step=global_iteration_step
+                )
+                val_loss += val_batch_loss.item()
+
                 sparse_metrics.observe(predicted_scores=output, target_ranks=batch['ans_ind'])
+
                 if 'gt_relevance' in batch:
                     output = output[
                              torch.arange(output.size(0)),
@@ -245,18 +252,9 @@ def train(opt, logger: AnaLogger, dataloader_dict, finetune=False, load_path='',
             torch.cuda.empty_cache()
 
             val_loss = val_loss / len(val_dataloader)
-            logger.info(
-                f'Validation loss for epoch {epoch} is {val_loss}.\n' +
-                f'Validation loss for batch is {val_batch_loss}.'
-            )
+            logger.info(f'Validation loss for epoch {epoch} is {val_loss}.\n')
 
-            summary_writer.add_scalar(
-                tag='val/loss',
-                scalar_value=val_batch_loss,
-                global_step=global_iteration_step
-            )
-
-            if val_batch_loss < best_val_loss:
+            if val_loss < best_val_loss:
                 logger.info(f'Best model found at epoch {epoch}! Saving now.')
                 best_val_loss = val_loss
                 checkpoint_manager.save_best()
