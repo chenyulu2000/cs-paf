@@ -104,11 +104,14 @@ def get_model(opt, logger: AnaLogger, train_dataset):
 
 def get_solver(opt, logger: AnaLogger, train_dataset, val_dataset, model, finetune=False):
     initial_lr = opt.initial_lr_curriculum if finetune else opt.initial_lr
-
-    if opt.training_splits == 'trainval':
-        iterations = 1 + (len(train_dataset) + len(val_dataset)) // opt.batch_size
+    if torch.cuda.device_count() > 0:
+        nodes = torch.cuda.device_count()
     else:
-        iterations = 1 + len(train_dataset) // opt.batch_size
+        nodes = 1
+    if opt.training_splits == 'trainval':
+        iterations = 1 + (len(train_dataset) + len(val_dataset)) // (opt.batch_size * nodes)
+    else:
+        iterations = 1 + len(train_dataset) // (opt.batch_size * nodes)
 
     def lr_lambda_fun(current_iteration) -> float:
         """Returns a learning rate multiplier.
